@@ -43,7 +43,9 @@ function buildRows(entries) {
       version: module.version || '',
       review: module.review || '',
       dateOfTesting: module.dateOfTesting || '',
-      tcRelease: module.tcRelease || ''
+      tcRelease: module.tcRelease || '',
+      checkSum: module.checkSum || '',
+      size: module.size || module.Size || ''
     }));
   });
 }
@@ -62,11 +64,14 @@ function mergeToPermanent(entries) {
     savePermanentRows([...existing, ...toAdd]);
   }
   // Also update existing rows with new data (same key → update fields)
-  const updatedRows = existing.map(r => {
-    const match = newRows.find(n => makeKey(n) === makeKey(r));
-    return match ? { ...r, ...match } : r;
-  });
-  savePermanentRows([...updatedRows, ...toAdd]);
+  
+const updatedRows = existing.map(r => {
+  const match = newRows.find(n => makeKey(n) === makeKey(r));
+  // Explicitly guarantee all fields carry forward during overrides
+  return match ? { ...r, ...match, checkSum: match.checkSum, size: match.size } : r;
+});
+savePermanentRows([...updatedRows, ...toAdd]);
+
 }
 
 function getSummary(entries) {
@@ -126,7 +131,7 @@ function renderSummary() {
 
   const updatedAt = document.getElementById('summaryUpdatedAt');
   const rowCount = document.getElementById('summaryRowCount');
-  if (updatedAt) updatedAt.textContent = entries.length ? 'Live from saved browser data' : 'No saved data';
+  if (updatedAt) updatedAt.textContent = entries.length ? '' : 'No saved data';
   if (rowCount) rowCount.textContent = currentPermRows.length + ' module row' + (currentPermRows.length === 1 ? '' : 's');
 }
 
@@ -154,7 +159,7 @@ function getFilteredModuleRows() {
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) => [
       row.projectName, row.moduleName, row.fwDocs, row.moduleNumber, row.authoNum, row.dvcReview,
-      row.version, row.review, row.dateOfTesting, row.tcRelease
+      row.version, row.review, row.dateOfTesting, row.tcRelease, row.checkSum, row.size
     ].some(field => String(field || '').toLowerCase().includes(moduleSearchText)));
 }
 
@@ -213,7 +218,7 @@ function renderProjects(summary) {
 function renderTable(entries) {
   const body = document.getElementById('summaryTableBody');
   if (!entries.length) {
-    const colspan = 11;
+    const colspan = 13;
     const msg = moduleSearchText
       ? 'No module rows match your search.'
       : 'No module details available. Add entries in the Tracker.';
@@ -236,6 +241,8 @@ function renderTable(entries) {
       <td>${escapeHtml(row.review)}</td>
       <td>${escapeHtml(row.dateOfTesting)}</td>
       <td>${statusPill(row.tcRelease)}</td>
+      <td>${escapeHtml(row.checkSum)}</td>
+      <td>${escapeHtml(row.size)}</td>
     </tr>
   `).join('');
 }
@@ -290,15 +297,15 @@ function exportSelectedModuleRows() {
 
   const wb = XLSX.utils.book_new();
   const sheetData = [
-    ['Project Name', 'Module Name', 'FW Docs', 'Module Number', 'I-AUTHO-NUM', 'DVC Review', 'Version', 'Date of Review', 'Date of Testing', 'TC Release'],
+    ['Project Name', 'Module Name', 'FW Docs', 'Module Number', 'I-AUTHO-NUM', 'DVC Review', 'Version', 'Date of Review', 'Date of Testing', 'TC Release', 'CheckSum', 'Size'],
     ...rows.map(row => [
       row.projectName, row.moduleName, row.fwDocs, row.moduleNumber, row.authoNum, row.dvcReview,
-      row.version, row.review, row.dateOfTesting, row.tcRelease
+      row.version, row.review, row.dateOfTesting, row.tcRelease, row.checkSum, row.size
     ])
   ];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
   ws['!cols'] = [24, 28, 12, 14, 18, 12, 12, 16, 16, 12].map(wch => ({ wch }));
-  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheetData.length - 1, c: 9 } }) };
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheetData.length - 1, c: 11 } }) };
   XLSX.utils.book_append_sheet(wb, ws, 'Selected Module Rows');
   XLSX.writeFile(wb, 'TW_Status_Tracker_Selected_Modules.xlsx');
   showSummaryToast('Downloaded ' + rows.length + ' selected row(s).');
@@ -329,7 +336,7 @@ function handleSummaryImport(input) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(event) {
+  reader.onload = function (event) {
     try {
       const wb = XLSX.read(event.target.result, { type: 'array', cellDates: true });
       const entries = importWorkbookToEntries(wb);
@@ -388,17 +395,21 @@ function sheetRowsToEntries(rows) {
     const rawProject = importCell(row, map.projectName);
     const rawEntry = importCell(row, map.entryNum);
     const projectName = rawProject || lastProjectName;
-    const entryNum = rawEntry || lastEntryNum || String(groups.size + 1);
+    
+    // CHANGE HERE: If entryNum is empty, default it to the project name instead of a number!
+    const entryNum = rawEntry || lastEntryNum || projectName || String(groups.size + 1);
     const moduleName = importCell(row, map.moduleName);
 
     if (!projectName && !moduleName) return;
     lastProjectName = projectName || lastProjectName;
     lastEntryNum = entryNum || lastEntryNum;
 
-    const groupKey = entryNum + '::' + projectName;
+    // We group by the Project Name directly now
+    const groupKey = projectName; 
     if (!groups.has(groupKey)) {
       groups.set(groupKey, {
-        entryNum: Number(entryNum) || groups.size + 1,
+        // CHANGE HERE: Assign the project name string directly to the entry's primary identification
+        entryNum: projectName || String(groups.size + 1), 
         projectName,
         modules: []
       });
@@ -416,12 +427,15 @@ function sheetRowsToEntries(rows) {
       version: importCell(row, map.version),
       review: importDateCell(row, map.review),
       dateOfTesting: importDateCell(row, map.dateOfTesting),
-      tcRelease: normalizeChoice(importCell(row, map.tcRelease))
+      tcRelease: normalizeChoice(importCell(row, map.tcRelease)),
+      checkSum: importCell(row, map.checkSum), 
+      size: importCell(row, map.size)
     });
   });
 
   return [...groups.values()]
-    .sort((a, b) => a.entryNum - b.entryNum)
+    // Sort cleanly by project name strings alphabetically
+    .sort((a, b) => String(a.projectName).localeCompare(String(b.projectName)))
     .map(group => ({
       projectName: group.projectName,
       modules: group.modules
@@ -429,6 +443,7 @@ function sheetRowsToEntries(rows) {
         .map(({ rowNum, ...module }) => module)
     }));
 }
+
 
 function findImportHeader(rows) {
   for (let r = 0; r < Math.min(rows.length, 25); r++) {
@@ -445,7 +460,9 @@ function findImportHeader(rows) {
       version: findHeaderIndex(normalized, ['version', 'versions']),
       review: findHeaderIndex(normalized, ['dateofreview', 'reviewdate', 'review']),
       dateOfTesting: findHeaderIndex(normalized, ['dateoftesting', 'testingdate', 'testdate']),
-      tcRelease: findHeaderIndex(normalized, ['tcrelease', 'tcreleasestatus', 'tcstatus'])
+      tcRelease: findHeaderIndex(normalized, ['tcrelease', 'tcreleasestatus', 'tcstatus']),
+      checkSum: findHeaderIndex(normalized, ['checksum', 'md5', 'hash']), // ADD This
+      size: findHeaderIndex(normalized, ['size', 'filesize', 'bytes'])
     };
     if (map.projectName > -1 && map.moduleName > -1) return { headerRowIndex: r, map };
   }
@@ -489,6 +506,7 @@ function normalizeChoice(value) {
   const text = String(value || '').trim().toLowerCase();
   if (['yes', 'y', 'true', '1'].includes(text)) return 'Yes';
   if (['no', 'n', 'false', '0'].includes(text)) return 'No';
+
   return value || '';
 }
 
