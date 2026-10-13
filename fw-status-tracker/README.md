@@ -50,3 +50,13 @@ tw-status-tracker/
     └── images/
         └── bg-watercolor-pastel.jpg   (page background image)
 ```
+
+
+## To clear all entries 
+- run the  main.py
+- when it opens in the browser ; click on 'F12' BUTTON
+- NAVIGATE TO CONSOLE
+- And paste the following commands 
+    - localStorage.clear();location.reload();
+- This resets the entries to 0
+
