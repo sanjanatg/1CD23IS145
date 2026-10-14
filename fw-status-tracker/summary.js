@@ -75,15 +75,33 @@ savePermanentRows([...updatedRows, ...toAdd]);
 }
 
 function getSummary(entries) {
-  const projects = [...new Set(entries.map(e => e.projectName).filter(Boolean))];
-  const rows = buildRows(entries);
-  const perProject = projects.map(projectName => {
-    const projectRows = rows.filter(row => row.projectName === projectName);
+  const validEntries = entries.filter(Boolean);
+  
+  // Group unique projects by uppercase keys to ignore casing variations
+  const projectMap = new Map();
+  validEntries.forEach(e => {
+    if (!e.projectName) return;
+    const key = e.projectName.trim().toUpperCase();
+    if (!projectMap.has(key)) {
+      // Retain the first variant encountered as the official display title
+      projectMap.set(key, e.projectName.trim()); 
+    }
+  });
+  
+  const projects = [...projectMap.values()];
+  const rows = buildRows(validEntries);
+
+  const perProject = projects.map(displayName => {
+    const targetKey = displayName.toUpperCase();
+    
+    // Filter matching rows regardless of raw input string casing adjustments
+    const projectRows = rows.filter(row => String(row.projectName || '').trim().toUpperCase() === targetKey);
     const dvcYes = projectRows.filter(row => row.dvcReview === 'Yes').length;
     const tcYes = projectRows.filter(row => row.tcRelease === 'Yes').length;
     const moduleCount = projectRows.filter(row => row.moduleName).length;
+    
     return {
-      projectName,
+      projectName: displayName, 
       modules: moduleCount,
       dvcYes,
       dvcNo: projectRows.filter(row => row.dvcReview === 'No').length,
@@ -104,6 +122,7 @@ function getSummary(entries) {
     rows
   };
 }
+
 
 // ── Toggle collapsible module details ──
 function toggleModuleDetails() {

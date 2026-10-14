@@ -41,13 +41,26 @@ function getProjectNames(entries = loadAll()) {
 
 function getSummary(entries = loadAll()) {
   const validEntries = entries.filter(Boolean);
-  const projects = getProjectNames(validEntries);
+  
+  // Group uniquely via an uppercase map lookup engine
+  const projectMap = new Map();
+  validEntries.forEach(e => {
+    if (!e.projectName) return;
+    const key = e.projectName.trim().toUpperCase();
+    if (!projectMap.has(key)) {
+      projectMap.set(key, e.projectName.trim());
+    }
+  });
+
+  const projects = [...projectMap.values()];
   const rows = buildAllProjectRows(validEntries);
-  const perProject = projects.map(projectName => {
-    const projectRows = rows.filter(row => row.projectName === projectName);
+  
+  const perProject = projects.map(displayName => {
+    const targetKey = displayName.toUpperCase();
+    const projectRows = rows.filter(row => String(row.projectName || '').trim().toUpperCase() === targetKey);
     return {
-      projectName,
-      entries: validEntries.filter(entry => entry.projectName === projectName).length,
+      projectName: displayName,
+      entries: validEntries.filter(entry => String(entry.projectName || '').trim().toUpperCase() === targetKey).length,
       modules: projectRows.filter(row => row.moduleName).length,
       dvcYes: projectRows.filter(row => row.dvcReview === 'Yes').length,
       tcYes: projectRows.filter(row => row.tcRelease === 'Yes').length
@@ -65,6 +78,7 @@ function getSummary(entries = loadAll()) {
     perProject
   };
 }
+
 
 function renderDashboard() {
   // (Project Wise Status section removed — nothing to render here now)
@@ -90,7 +104,8 @@ function renumberEntries() {
 
     if (label) {
       // If the field contains text, use it as the title! Otherwise, print "Entry N"
-      label.textContent = (projInput && projInput.value.trim()) ? projInput.value.trim() : 'Entry ' + n;
+      label.textContent = (projInput && projInput.value.trim()) ? 'Project: ' + projInput.value.trim().toUpperCase() : 'Entry ' + n;
+
     }
 
     const delBtn = card.querySelector('.btn-delete-entry');
@@ -413,13 +428,60 @@ function resetToBlank() {
   addEntry();
 }
 
+// ── CORRECTED CODE: Groups Multi-Row Entries Under a Single Form Card Panel ──
 function renderEntries(entries) {
   const container = document.getElementById('entriesContainer');
   container.innerHTML = '';
-  const cleanEntries = entries && entries.length ? entries : [{}];
-  cleanEntries.forEach(entry => addEntry(entry, { focus: false }));
+  
+  if (!entries || !entries.length) {
+    addEntry(); // Opens a single clean form if storage is empty
+    return;
+  }
+
+  // 1. Group all rows case-insensitively by project name first
+  const unifiedGroups = new Map();
+  
+  entries.forEach(entry => {
+    if (!entry || !entry.projectName) return;
+    
+    const lookupKey = entry.projectName.trim().toUpperCase();
+    
+    if (!unifiedGroups.has(lookupKey)) {
+      // Create a single container entry group record tracking all combined modules
+      unifiedGroups.set(lookupKey, {
+        projectName: entry.projectName.trim(), 
+        modules: []
+      });
+    }
+    
+    // Push all structural modules from this array block into the unified project record
+    if (entry.modules && entry.modules.length) {
+      entry.modules.forEach(mod => {
+        // Prevent duplicate modules from slipping into the display cards loop
+        const isDuplicate = unifiedGroups.get(lookupKey).modules.some(
+          m => String(m.moduleName).trim().toLowerCase() === String(mod.moduleName).trim().toLowerCase() &&
+               String(m.version).trim().toLowerCase() === String(mod.version).trim().toLowerCase()
+        );
+        if (!isDuplicate) {
+          unifiedGroups.get(lookupKey).modules.push(mod);
+        }
+      });
+    }
+  });
+
+  // 2. Render exactly ONE card element for each unique project name group
+  if (unifiedGroups.size === 0) {
+    addEntry();
+  } else {
+    unifiedGroups.forEach(groupedData => {
+      addEntry(groupedData, { focus: false });
+    });
+  }
+  
+  // 3. Reset correct counting numbers sequentially across headings
   renumberEntries();
 }
+
 
 /* ── Delete entry (removes from form view only — permanent module data is kept) ── */
 function deleteEntry(btn) {
@@ -596,13 +658,38 @@ function getAllCardData() {
 }
 
 function getSavableCardData() {
-  return getAllCardData()
-    .filter(entry => entry.projectName && entry.modules.some(module => module.moduleName))
-    .map(entry => ({
-      projectName: entry.projectName,
-      modules: entry.modules.filter(module => module.moduleName)
-    }));
+  const rawCardsData = getAllCardData();
+  const mergedMap = new Map();
+
+  rawCardsData.forEach(card => {
+    if (!card.projectName) return;
+    const key = card.projectName.trim().toUpperCase();
+    const validModules = card.modules.filter(m => m.moduleName);
+
+    if (validModules.length === 0) return;
+
+    if (!mergedMap.has(key)) {
+      mergedMap.set(key, {
+        projectName: card.projectName.trim(),
+        modules: []
+      });
+    }
+
+    // Append modules into the singular project key
+    validModules.forEach(mod => {
+      const exists = mergedMap.get(key).modules.some(
+        m => String(m.moduleName).trim().toLowerCase() === String(mod.moduleName).trim().toLowerCase() &&
+             String(m.version).trim().toLowerCase() === String(mod.version).trim().toLowerCase()
+      );
+      if (!exists) {
+        mergedMap.get(key).modules.push(mod);
+      }
+    });
+  });
+
+  return [...mergedMap.values()];
 }
+
 
 function persistVisibleCards() {
   saveAll(getSavableCardData());
@@ -649,7 +736,7 @@ function persistVisibleCards() {
     const rowCount = entry.modules.length;
     markSaved(card);
     renderDashboard();
-    showToast('✓ Entry ' + eid + ' saved — ' + rowCount + ' row(s).');
+    showToast('✓ Entry saved ');
   }
   
 
