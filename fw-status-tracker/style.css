@@ -40,7 +40,7 @@
   .org-badge {
     display: inline-block;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 13px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase;
+    font-size: 22px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
     color: rgb(20, 2, 2);
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35);
     border-radius: 30px; padding: 6px 22px; margin-bottom: 18px;
@@ -501,7 +501,7 @@
     box-shadow: 0 5px 18px rgba(90,140,200,0.18);
   }
   .btn-import {
-    color: #8a4c9f;
+    color: #1d0d22;
     border-color: rgba(155,111,181,0.34);
   }
   .btn-bottom {
@@ -991,8 +991,8 @@
 /* ── Logout button (summary page) ── */
   .btn-logout {
     background: rgba(220,53,69,0.1) !important;
-    border-color: rgba(220,53,69,0.3) !important;
-    color: #f87171 !important;
+    border-color: rgba(233, 39, 58, 0.445) !important;
+    color: #161515e8 !important;
   }
   .btn-logout:hover {
     background: rgba(220,53,69,0.2) !important;
@@ -1008,7 +1008,7 @@
     background: none;
     border: 1.5px solid rgba(220,53,69,0.3);
     border-radius: 8px;
-    color: rgba(248,113,113,0.8);
+    color: rgba(14, 13, 13, 0.808);
     font-size: 0.78rem;
     font-weight: 600;
     font-family: 'Inter', sans-serif;
@@ -1023,3 +1023,109 @@
     border-color: rgba(220,53,69,0.5);
     color: #fca5a5;
   }
+/* Container that holds both the 4 metrics cards and the button */
+.metrics-row-container {
+  display: flex !important;
+   /* Forces the button to be the exact same height as the cards */
+  gap: 12px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+
+/* Fixes the grid layout so it only takes 4 slots and leaves room on the right */
+.summary-metric-grid {
+  flex: 1 !important; /* Lets the cards take up all left-side space dynamically */
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important; /* Enforces a 4-column row layout */
+  gap: 12px;
+  margin-bottom: 0 !important; /* Removes bottom spacing that pushes things out of line */
+}
+
+/* Wrapper handling alignment for the button */
+.metric-import-wrapper {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+/* Style the Import button with a solid themed blue background */
+.metric-import-wrapper .btn-import-summary {
+  height: 50% !important;
+  min-height: 85px; /* Matches the exact min-height of your summary cards */
+  width: 180px;      /* Consistent visual box width */
+  display: inline-flex;
+  flex-direction: column; /* Places the SVG icon above the text */
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  
+  /* CHANGED TO THEMED BLUE BACKGROUND */
+  background: var(--accent, #0e7fa8) !important; 
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 5px 20px rgba(14, 127, 168, 0.25) !important;
+  
+  /* CHANGED TEXT & ICON COLOR TO WHITE FOR CONTRAST */
+  color: #ffffff !important; 
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s, opacity 0.12s;
+}
+
+/* Subtle hover state for the blue background */
+.metric-import-wrapper .btn-import-summary:hover {
+  background: #045270de !important; /* Slightly darker shade of blue on hover */
+  transform: translateY(-1px);
+}
+/* --- Replicated Base Layout Setup from Summary Header --- */
+.summary-page-header.unique-tracker-header {
+  display: flex !important;
+  justify-content: space-between !important; /* Pushes text/navigation block and logout button apart */
+  align-items: flex-end !important;         /* Anchors buttons evenly to the bottom line */
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px;
+  border-radius: 10px;
+  margin: 20px auto 22px;
+  width: calc(100% - 32px);
+  max-width: 1180px;
+  
+  /* Semi-transparent blur container filter overlay to keep theme colors readable */
+  background: linear-gradient(135deg, rgba(14, 127, 168, 0.94), rgba(90, 180, 214, 0.86) 42%, rgba(155, 111, 181, 0.84)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.44) !important;
+  box-shadow: 0 12px 34px rgba(30, 42, 58, 0.18) !important;
+  color: #ffffff !important;
+}
+
+/* --- Internal typography structure alignment --- */
+.unique-tracker-header .header-left-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unique-tracker-header .summary-kicker h1 {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 1px;
+  margin: 0;
+  color: #ffffff;
+}
+
+.unique-tracker-header h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 4px 0 0 0;
+}
+
+.unique-tracker-header .tracker-btn-wrapper {
+  margin-top: 14px;
+}

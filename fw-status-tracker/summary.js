@@ -205,11 +205,11 @@ function renderProjects(summary) {
       </div>
       <div class="summary-progress"><span style="width:${project.completion}%"></span></div>
       <div class="summary-project-stats">
-        <span><strong>${project.modules}</strong> Modules</span>
-        <span><strong>${project.dvcYes}</strong> DVC Yes</span>
-        <span><strong>${project.dvcNo}</strong> DVC No</span>
-        <span><strong>${project.tcYes}</strong> TC Yes</span>
-        <span><strong>${project.tcNo}</strong> TC No</span>
+        <span> Modules : <strong>${project.modules}</strong> </span>
+        <span> DVC Review - Yes : <strong>${project.dvcYes}</strong></span>
+        <span> DVC Review - No : <strong>${project.dvcNo}</strong></span>
+        <span> TC Release - Yes : <strong>${project.tcYes}</strong></span>
+        <span> TC Release - No : <strong>${project.tcNo}</strong></span>
       </div>
     </article>
   `).join('');
