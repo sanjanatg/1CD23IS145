@@ -1129,3 +1129,31 @@
 .unique-tracker-header .tracker-btn-wrapper {
   margin-top: 14px;
 }
+/* --- Fine Border Separation Line Between Module Rows --- */
+.module-divider {
+  position: relative;
+  /* INCREASED: Pushes content further down away from the divider line */
+  padding-top: 28px; 
+}
+
+/* Draws the line automatically before every row except the first module row */
+.module-row-wrap.module-divider ~ .module-row-wrap.module-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    rgba(90, 180, 214, 0.4) 0%, 
+    rgba(155, 111, 181, 0.2) 60%, 
+    transparent 100%);
+}
+
+/* Adjusts the internal module layout stacking constraints inside the project container */
+.module-rows {
+  display: flex;
+  flex-direction: column;
+  /* INCREASED: Adds much more clear gap distance space between modules */
+  gap: 36px; 
+}
