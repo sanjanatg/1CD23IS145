@@ -132,10 +132,10 @@ if (data.size) {
   return `
         <div class="card-line3">
           <div class="fgroup">
-            <div class="flabel"><strong><b>Module Name</b></strong></div>
+            <div class="flabel">Module Name</div>
             <div class="mod-wrap">
               <input type="text" name="moduleName"
-                placeholder="e.g. Module 1"
+                placeholder="e.g. User Login"
                 value="${escHtml(data.moduleName || '')}"
                 autocomplete="off"
                 oninput="onModInput(this)"
@@ -146,7 +146,7 @@ if (data.size) {
   
           <div class="fgroup">
             <div class="flabel">FW Document</div>
-            ${makeSelect('fwDocs', ['', 'FRS', 'FIRS', 'FDD' , 'FW' , 'TSW' , 'ASW'], data.fwDocs || '')}
+            ${makeSelect('fwDocs', ['', 'FRS', 'FIRS', 'FDD'], data.fwDocs || '')}
           </div>
   
           <div class="fgroup">
@@ -277,30 +277,30 @@ function addModuleRow(card, data = {}) {
   wrap.className = 'module-row-wrap';
   wrap.dataset.rid = rid;
 
-  // const removeBtn = `
-  //     <button class="btn-remove-row" type="button" title="Remove module row" onclick="removeModuleRow(this)">
-  //       <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-  //         <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-  //       </svg>
-  //     </button>`;
+  const removeBtn = `
+      <button class="btn-remove-row" type="button" title="Remove module row" onclick="removeModuleRow(this)">
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+          <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </button>`;
 
   wrap.innerHTML = moduleRowHtml(rid, data);
-  // wrap.insertAdjacentHTML('beforeend', removeBtn);
+  wrap.insertAdjacentHTML('beforeend', removeBtn);
 
   card.querySelector('.module-rows').appendChild(wrap);
   initRowPickers(wrap);
-  
+  toggleRemoveButtons(card);
   return wrap;
 }
 
 
-// function removeModuleRow(btn) {
-//   const wrap = btn.closest('.module-row-wrap');
-//   const card = wrap.closest('.entry-card');
-//   wrap.remove();
-//   toggleRemoveButtons(card);
-//   persistVisibleCards();
-// }
+function removeModuleRow(btn) {
+  const wrap = btn.closest('.module-row-wrap');
+  const card = wrap.closest('.entry-card');
+  wrap.remove();
+  toggleRemoveButtons(card);
+  persistVisibleCards();
+}
 
 /* Hide the remove button when only one module row remains */
 function toggleRemoveButtons(card) {

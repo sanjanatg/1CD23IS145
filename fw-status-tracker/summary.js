@@ -1,6 +1,8 @@
+// --- LINE 1-3 inside summary.js ---
 const STORE_KEY = 'tw_tracker_v9';
-// Separate permanent key for module details — never wiped by entry deletions
-const PERM_KEY = 'tw_tracker_perm_modules';
+// FIX: Match the exact lowercase key format used by script.js to load the saved array
+const PERM_KEY = 'tw_tracker_perm_modules'; 
+
 
 // I-AUTHO-NUM: fixed 11-zero prefix + 5 manually entered digits = 16 chars total
 const AUTHO_PREFIX = '00000000000';
@@ -13,6 +15,284 @@ function buildAuthoNum(suffix) {
 let currentPermRows = [];       // full, unfiltered list of module rows currently loaded
 let moduleSearchText = '';      // current search bar text (lowercased)
 let selectedModuleRows = new Set(); // indices (into currentPermRows) that are checked
+
+// ── STATE MANIPULATION HEADERS FOR MULTI-FILTER MATCHING ──
+let activeFilters = {
+  projectName: 'ALL',
+  selectedModules: new Set(), // tracks checked module names
+  timeline: '' // formatted string tracker "MM/YYYY"
+};
+
+// Global hook placeholder variable to track Flatpickr engine instance
+let filterCalInstance = null;
+
+// Catch initial setup and extend default render workflows seamlessly
+// const originalRenderSummary = renderSummary;
+window.addEventListener('DOMContentLoaded', () => {
+  // Execute database data pull sequence securely on page mount
+  const entries = loadAll().filter(Boolean);
+  if (entries.length) mergeToPermanent(entries);
+
+  currentPermRows = loadPermanentRows();
+  
+  // Instantly process calculations for the top cards view
+  const summary = getSummaryFromPermanentRows(currentPermRows);
+  renderMetrics(summary);
+  
+  // Seed the dropdown controls securely using the complete master array
+  initFilterControlsData(currentPermRows);
+  
+  // Fire decoupled panel rendering actions simultaneously
+  runCombinedFilters();   // Strictly handles middle progress cards viewports
+  renderFilteredTable();  // Strictly handles lower data grid rows viewports
+});;
+
+// ── SEED DATA VALUES INTO FILTER UI COMPONENT DRAWER DRAWS ──
+// ── 1. FIXED FILTER ENGINE INITIALIZER ──
+function initFilterControlsData(rows) {
+  const projSelect = document.getElementById('filterProjectSelect');
+  const modDrawer = document.getElementById('moduleCheckboxDrawer');
+  
+  if (!projSelect || !modDrawer) return;
+
+  const uniqueProjects = [...new Set(rows.map(r => (r.projectName || '').trim()).filter(Boolean))];
+  const uniqueModules = [...new Set(rows.map(r => (r.moduleName || '').trim()).filter(Boolean))];
+
+  // Map project options standardizing data keys to lowercase strings
+  const currentProjSelection = projSelect.value || 'ALL';
+  projSelect.innerHTML = '<option value="ALL">— Select Project —</option>' + 
+    uniqueProjects.map(p => `<option value="${escapeHtml(p.trim().toLowerCase())}">${escapeHtml(p)}</option>`).join('');
+  projSelect.value = currentProjSelection;
+
+  // Map out modules list drawer cleanly
+  const drawerItemsHtml = uniqueModules.map(m => {
+    const lowerM = m.trim().toLowerCase();
+    const isChecked = activeFilters.selectedModules.has(lowerM) ? 'checked' : '';
+    return `
+      <label class="drawer-checkbox-item">
+        <input type="checkbox" value="${escapeHtml(lowerM)}" ${isChecked} onchange="handleModuleCheckboxChange(this, '${escapeHtml(m)}')"/>
+        <span>${escapeHtml(m)}</span>
+      </label>
+    `;
+  }).join('');
+  modDrawer.innerHTML = drawerItemsHtml || '<div style="padding: 8px; color: var(--muted);">No modules available</div>';
+
+  const timelineInput = document.getElementById('filterTimelineInput');
+  if (timelineInput) {
+    timelineInput.onchange = function() {
+      handleNativeMonthFilter(this);
+    };
+  }
+}
+
+
+// Translates the native calendar input into dashboard database tokens safely offline
+function handleNativeMonthFilter(input) {
+  const val = input.value; // Returns raw string "YYYY-MM" (e.g. "2026-10")
+  if (!val) {
+    activeFilters.timeline = '';
+  } else {
+    const parts = val.split('-'); // ["2026", "10"]
+    activeFilters.timeline = parts[1].padStart(2, '0') + '/' + parts[0]; // Saves cleanly as "10/2026"
+  }
+  runCombinedFilters();
+}
+
+// Handle checkboxes dynamic updates
+function handleModuleCheckboxChange(cb, rawName) {
+  const val = cb.value;
+  if (cb.checked) {
+    activeFilters.selectedModules.add(val);
+  } else {
+    activeFilters.selectedModules.delete(val);
+  }
+  
+  // Update selection indicator count tracking texts
+  const label = document.getElementById('checkboxDropdownLabel');
+  if (activeFilters.selectedModules.size === 0) {
+    label.textContent = "All Modules Selected";
+  } else {
+    label.textContent = `${activeFilters.selectedModules.size} Module(s) Selected`;
+  }
+  
+  runCombinedFilters();
+}
+// Toggle open/close visibility states on the custom dropdown menu panel layer box
+function toggleModuleSelectorDrawer(event) {
+  event.stopPropagation();
+  const drawer = document.getElementById('moduleCheckboxDrawer');
+  const selectBox = event.currentTarget;
+  
+  drawer.classList.toggle('open-drawer');
+  selectBox.classList.toggle('active-box');
+  
+  // Hook listener window to close drawer cleanly if user clicks anywhere else on screen
+  if (drawer.classList.contains('open-drawer')) {
+    document.addEventListener('click', closeModuleSelectorDrawerOutside);
+  }
+}
+
+// Automatically folds drawer close when clicking background elements outside menu area
+function closeModuleSelectorDrawerOutside() {
+  const drawer = document.getElementById('moduleCheckboxDrawer');
+  const selectBox = document.querySelector('.module-dropdown-select-box');
+  
+  if (drawer) drawer.classList.remove('open-drawer');
+  if (selectBox) selectBox.classList.remove('active-box');
+  
+  document.removeEventListener('click', closeModuleSelectorDrawerOutside);
+}
+
+// Open/Close dropdown lists cleanly
+function toggleModuleDrawer(e) {
+  e.stopPropagation();
+  const drawer = document.getElementById('moduleCheckboxDrawer');
+  drawer.classList.toggle('show');
+  document.addEventListener('click', closeModuleDrawerOutside);
+}
+
+function closeModuleDrawerOutside() {
+  const drawer = document.getElementById('moduleCheckboxDrawer');
+  if (drawer) drawer.classList.remove('show');
+  document.removeEventListener('click', closeModuleDrawerOutside);
+}
+
+// ── 1. UPDATE RUNCOMBINEDFILTERS TO REMOVE LOWER TABLE CONTROLS ──
+function runCombinedFilters() {
+  const projSelect = document.getElementById('filterProjectSelect');
+  if (projSelect) activeFilters.projectName = projSelect.value || 'ALL';
+
+  // Fallback layout view when "— Select Project —" (ALL) is left active
+  if (activeFilters.projectName === 'ALL') {
+    const listContainer = document.getElementById('summaryProjectList');
+    if (listContainer) {
+      listContainer.innerHTML = '<div class="summary-empty-state" style="border-style: solid; text-align: center; padding: 24px;">Please select a particular project from the dropdown filter above to view status cards metrics.</div>';
+    }
+    // FIX: Removed table manipulation calls from here completely!
+    return; 
+  }
+
+  // Filter rows specifically to update the middle progress card panel indicators
+  const matchedRows = currentPermRows.filter(row => {
+    // A. Verify selected project layout mapping matches
+    if (String(row.projectName || '').trim().toLowerCase() !== activeFilters.projectName) return false;
+
+    // B. Verify active checkbox drawer tags overlap perfectly
+    if (activeFilters.selectedModules.size > 0) {
+      if (!activeFilters.selectedModules.has(String(row.moduleName || '').trim().toLowerCase())) return false;
+    }
+
+    // C. Verify custom timeline month intervals align accurately
+    if (activeFilters.timeline) {
+      const reviewDateStr = String(row.review || '').trim();
+      const testingDateStr = String(row.dateOfTesting || '').trim();
+
+      const extractMonthYear = (dStr) => {
+        if (!dStr || !dStr.includes('/')) return '';
+        const p = dStr.split('/');
+        if (p.length < 3) return '';
+        return p.padStart(2, '0') + '/' + p;
+      };
+
+      const matchReview = extractMonthYear(reviewDateStr) === activeFilters.timeline;
+      const matchTesting = extractMonthYear(testingDateStr) === activeFilters.timeline;
+
+      if (!matchReview && !matchTesting) return false;
+    }
+
+    return true; 
+  });
+
+  // Re-build visual status card rows viewports in the middle section panel
+  updateFilterCardsView(matchedRows);
+}
+
+
+// ── PRINT OUT THE CLEAN CONSOLIDATED FILTER CARDS GRID ──
+// ── UPDATED COMPONENT: Dynamically lists matched module strings and aligns parameters ──
+function updateFilterCardsView(filteredRows) {
+  const listContainer = document.getElementById('summaryProjectList');
+  if (!listContainer) return;
+
+  if (!filteredRows.length) {
+    listContainer.innerHTML = '<div class="summary-empty-state" style="border-style: solid; text-align: center; padding: 24px;">No matching project status metrics found for the selected filter variations.</div>';
+    return;
+  }
+
+  const groups = new Map();
+  filteredRows.forEach(row => {
+    const key = String(row.projectName || '').trim().toUpperCase();
+    if (!groups.has(key)) {
+      groups.set(key, {
+        displayName: row.projectName || 'Unnamed Project',
+        rows: []
+      });
+    }
+    groups.get(key).rows.push(row);
+  });
+
+  listContainer.innerHTML = [...groups.values()].map(projGroup => {
+    const pRows = projGroup.rows;
+    const activeModuleNames = [...new Set(pRows.filter(r => r.moduleName).map(r => String(r.moduleName).trim()))].filter(Boolean);
+
+    let modulesListDisplayString = "";
+    if (activeModuleNames.length > 0) {
+      modulesListDisplayString = ` (${activeModuleNames.join(', ')})`;
+    }
+
+    const moduleCount = pRows.filter(r => r.moduleName).length;
+    const dvcYes = pRows.filter(r => r.dvcReview === 'Yes').length;
+    const dvcNo = pRows.filter(r => r.dvcReview === 'No').length;
+    const tcYes = pRows.filter(r => r.tcRelease === 'Yes').length;
+    const tcNo = pRows.filter(r => r.tcRelease === 'No').length;
+    const completion = moduleCount ? Math.round(((dvcYes + tcYes) / (moduleCount * 2)) * 100) : 0;
+
+    return `
+      <article class="summary-project-card full-width-card-override">
+        <div class="summary-project-top">
+          <div>
+            <h3>${escapeHtml(projGroup.displayName)}</h3>
+          </div>
+          <strong>${completion}%</strong>
+        </div>
+        <div class="summary-progress"><span style="width:${completion}%"></span></div>
+        <div class="summary-project-stats aligned-rows-grid">
+          <div class="stat-row full-width-stat">
+            Modules matched : <strong>${moduleCount}${escapeHtml(modulesListDisplayString)}</strong>
+          </div>
+          <div class="stat-row split-stat-pair">
+            <span>DVC Review - Yes : <strong>${dvcYes}</strong></span>
+            <span>DVC Review - No : <strong>${dvcNo}</strong></span>
+          </div>
+          <div class="stat-row split-stat-pair">
+            <span>TC Release - Yes : <strong>${tcYes}</strong></span>
+            <span>TC Release - No : <strong>${tcNo}</strong></span>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+
+// ── FULL RESET TRIGGER ROUTINE ──
+function resetDashboardFilters() {
+  document.getElementById('filterProjectSelect').value = 'ALL';
+  activeFilters.projectName = 'ALL';
+  activeFilters.selectedModules.clear();
+  
+  const label = document.getElementById('checkboxDropdownLabel');
+  if (label) label.textContent = "All Modules Selected";
+  
+  document.querySelectorAll('#moduleCheckboxDrawer input[type="checkbox"]').forEach(cb => cb.checked = false);
+  
+  // FIXED FOR OFFLINE MONTH INPUT: Clears the native calendar date picker text box field cleanly
+  const timelineInput = document.getElementById('filterTimelineInput');
+  if (timelineInput) timelineInput.value = '';
+  activeFilters.timeline = '';
+  
+  runCombinedFilters();
+}
 
 // ── Storage ──
 function loadAll() {
@@ -51,28 +331,36 @@ function buildRows(entries) {
 }
 
 // ── Merge new rows into permanent store (append only, no deletion) ──
+// ── REPLACE THIS DETAILED SNIPPET IN SUMMARY.JS ──
 function mergeToPermanent(entries) {
   const existing = loadPermanentRows();
   const newRows = buildRows(entries);
 
-  // Build a key to deduplicate: project+module+version combo
-  const makeKey = r => [r.projectName, r.moduleName, r.version, r.fwDocs].join('||').toLowerCase();
-  const existingKeys = new Set(existing.map(makeKey));
-
-  const toAdd = newRows.filter(r => r.moduleName && !existingKeys.has(makeKey(r)));
-  if (toAdd.length) {
-    savePermanentRows([...existing, ...toAdd]);
-  }
-  // Also update existing rows with new data (same key → update fields)
+  // Enforce uppercase string keys to handle any mixed casing project inputs safely
+  const makeKey = r => [
+    String(r.projectName || '').trim().toUpperCase(),
+    String(r.moduleName || '').trim().toLowerCase(),
+    String(r.version || '').trim().toLowerCase(),
+    String(r.fwDocs || '').trim().toLowerCase()
+  ].join('||');
   
-const updatedRows = existing.map(r => {
-  const match = newRows.find(n => makeKey(n) === makeKey(r));
-  // Explicitly guarantee all fields carry forward during overrides
-  return match ? { ...r, ...match, checkSum: match.checkSum, size: match.size } : r;
-});
-savePermanentRows([...updatedRows, ...toAdd]);
+  const existingKeyMap = new Map(existing.map((r, i) => [makeKey(r), i]));
+  const merged = [...existing];
 
+  newRows.forEach(row => {
+    if (!row.moduleName) return;
+    const key = makeKey(row);
+    if (existingKeyMap.has(key)) {
+      // DYNAMIC FETCH CORRECTION: Overwrite fields, ensuring checksum & size are safely appended
+      merged[existingKeyMap.get(key)] = { ...merged[existingKeyMap.get(key)], ...row };
+    } else {
+      merged.push(row);
+    }
+  });
+  
+  savePermanentRows(merged);
 }
+
 
 function getSummary(entries) {
   const validEntries = entries.filter(Boolean);
@@ -132,27 +420,53 @@ function toggleModuleDetails() {
   panel.style.display = isOpen ? 'none' : 'block';
   chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
+// Computes total metrics directly from the permanent rows database array
+function getSummaryFromPermanentRows(rows) {
+  if (!rows || !rows.length) {
+    return { totalProjects: 0, totalModules: 0, dvcYes: 0, dvcNo: 0, tcYes: 0, tcNo: 0 };
+  }
+
+  const validRows = rows.filter(r => r && r.moduleName);
+  const projectSet = new Set();
+  
+  validRows.forEach(r => {
+    if (r.projectName) projectSet.add(String(r.projectName).trim().toLowerCase());
+  });
+
+  return {
+    totalProjects: projectSet.size,
+    totalModules: validRows.length,
+    dvcYes: validRows.filter(r => r.dvcReview === 'Yes').length,
+    dvcNo: validRows.filter(r => r.dvcReview === 'No').length,
+    tcYes: validRows.filter(r => r.tcRelease === 'Yes').length,
+    tcNo: validRows.filter(r => r.tcRelease === 'No').length
+  };
+}
+
+
 
 // ── Render ──
 function renderSummary() {
+  // Execute database data pull sequence securely on page mount
   const entries = loadAll().filter(Boolean);
-  // Sync permanent store whenever page loads
   if (entries.length) mergeToPermanent(entries);
 
-  const summary = getSummary(entries);
-  renderMetrics(summary);
-  renderProjects(summary);
-
   currentPermRows = loadPermanentRows();
-  // Drop selections that no longer correspond to an existing row
-  selectedModuleRows = new Set([...selectedModuleRows].filter(i => i < currentPermRows.length));
-  renderFilteredTable();
-
-  const updatedAt = document.getElementById('summaryUpdatedAt');
-  const rowCount = document.getElementById('summaryRowCount');
-  if (updatedAt) updatedAt.textContent = entries.length ? '' : 'No saved data';
-  if (rowCount) rowCount.textContent = currentPermRows.length + ' module row' + (currentPermRows.length === 1 ? '' : 's');
+  
+  // Instantly process calculations for the top cards view
+  const summary = getSummaryFromPermanentRows(currentPermRows);
+  renderMetrics(summary);
+  
+  // Seed the dropdown controls securely using the complete master array
+  initFilterControlsData(currentPermRows);
+  
+  // Fire decoupled panel rendering actions simultaneously
+  runCombinedFilters();   // Strictly handles middle progress cards viewports
+  renderFilteredTable();  // Strictly handles lower data grid rows viewports
 }
+
+// Bind to window lifecycle listener to ensure safe auto-booting on layout load
+window.addEventListener('DOMContentLoaded', renderSummary);
 
 // ── Search bar: filter currentPermRows by any field, then render ──
 function filterModuleTable() {
@@ -173,39 +487,64 @@ function clearModuleSearch() {
 }
 
 function getFilteredModuleRows() {
-  if (!moduleSearchText) return currentPermRows.map((row, idx) => ({ row, idx }));
+  // If the lower search text field is completely empty, return all permanent data rows instantly mapped with their index positions
+  if (!moduleSearchText) {
+    return currentPermRows.map((row, idx) => ({ row, idx }));
+  }
+  
+  // If search text is active, filter cross-column fields cleanly without crashing on empty values
   return currentPermRows
     .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => [
-      row.projectName, row.moduleName, row.fwDocs, row.moduleNumber, row.authoNum, row.dvcReview,
-      row.version, row.review, row.dateOfTesting, row.tcRelease, row.checkSum, row.size
-    ].some(field => String(field || '').toLowerCase().includes(moduleSearchText)));
+    .filter(({ row }) => {
+      if (!row) return false;
+      return [
+        row.projectName, row.moduleName, row.fwDocs, row.moduleNumber, 
+        row.authoNum, row.dvcReview, row.version, row.review, 
+        row.dateOfTesting, row.tcRelease, row.checkSum, row.size
+      ].some(field => String(field || '').toLowerCase().includes(moduleSearchText));
+    });
 }
 
+
 function renderFilteredTable() {
-  renderTable(getFilteredModuleRows());
+  const rowsToDraw = getFilteredModuleRows();
+  
+  // Force rendering onto the target layout grid view template table body
+  renderTable(rowsToDraw);
+  
+  // Dynamically update the row counter below the table to accurately reflect table elements
+  const rowCounter = document.getElementById('summaryRowCount');
+  if (rowCounter) {
+    rowCounter.textContent = `${rowsToDraw.length} module row(s) listed below`;
+  }
+  
   updateSelectedCount();
   syncSelectAllCheckbox();
 }
-
 function renderMetrics(summary) {
-  const grid = document.getElementById('summaryMetricGrid');
-  // "Entries" card is removed as requested
-  const metrics = [
-    ['FW Total Projects', summary.totalProjects, 'Saved project names'],
-    ['FW Total Project Modules', summary.totalModules, 'Total module rows'],
-    ['FW Total DVC Reviewed', summary.dvcYes, summary.dvcNo + ' pending / no'],
-    ['FW Total TC Released', summary.tcYes, summary.tcNo + ' pending / no']
-  ];
+  const dataPayload = summary || { totalProjects: 0, totalModules: 0, dvcYes: 0, dvcNo: 0, tcYes: 0, tcNo: 0 };
 
-  grid.innerHTML = metrics.map(metric => `
-    <article class="summary-metric-card">
-      <div>${escapeHtml(metric[0])}</div>
-      <strong>${metric[1]}</strong>
-      <span>${escapeHtml(metric[2])}</span>
-    </article>
-  `).join('');
+  // Target numbers directly by their element IDs
+  const elProjects = document.getElementById('metricTotalProjects');
+  const elModules = document.getElementById('metricTotalModules');
+  const elDvc = document.getElementById('metricDvcReviewed');
+  const elDvcSub = document.getElementById('metricDvcSubtext');
+  const elTc = document.getElementById('metricTcReleased');
+  const elTcSub = document.getElementById('metricTcSubtext');
+
+  // Update text node content fields securely without breaking container layouts
+  if (elProjects) elProjects.textContent = dataPayload.totalProjects || 0;
+  if (elModules)  elModules.textContent  = dataPayload.totalModules || 0;
+  if (elDvc)      elDvc.textContent      = dataPayload.dvcYes || 0;
+  if (elTc)       elTc.textContent       = dataPayload.tcYes || 0;
+
+  // Dynamically update subtext descriptions
+  if (elDvcSub) elDvcSub.textContent = (dataPayload.dvcNo || 0) + ' pending / no';
+  if (elTcSub)  elTcSub.textContent  = (dataPayload.tcNo || 0) + ' pending / no';
 }
+
+
+
 
 function renderProjects(summary) {
   const list = document.getElementById('summaryProjectList');
@@ -350,6 +689,7 @@ function showSummaryToast(msg) {
 }
 
 // ── Import on Summary page ──
+// ── FIND THIS BLOCK IN YOUR FILE ──
 function handleSummaryImport(input) {
   const file = input.files && input.files[0];
   if (!file) return;
@@ -358,19 +698,53 @@ function handleSummaryImport(input) {
   reader.onload = function (event) {
     try {
       const wb = XLSX.read(event.target.result, { type: 'array', cellDates: true });
-      const entries = importWorkbookToEntries(wb);
-      if (!entries.length) {
+      const importedEntries = importWorkbookToEntries(wb);
+      if (!importedEntries.length) {
         showSummaryToast('No project rows found. Check the Excel column headers.');
         return;
       }
 
-      // Save to main store
-      localStorage.setItem('tw_tracker_v9', JSON.stringify(entries));
-      // Sync to permanent store
-      mergeToPermanent(entries);
-      // Re-render
+      // ── CHANGE EVERYTHING FROM HERE DOWN TO THE CATCH BLOCK ──
+      
+      // 1. Load your current live dashboard workspace cards state
+      let currentActiveWorkspace = [];
+      try {
+        currentActiveWorkspace = JSON.parse(localStorage.getItem('tw_tracker_v9') || '[]');
+      } catch (e) {
+        currentActiveWorkspace = [];
+      }
+
+      // 2. Loop and merge rows into their matching project slots case-insensitively
+      importedEntries.forEach(newEntry => {
+        const targetName = String(newEntry.projectName || '').trim().toUpperCase();
+        
+        const existingProjectMatch = currentActiveWorkspace.find(
+          oldEntry => String(oldEntry.projectName || '').trim().toUpperCase() === targetName
+        );
+
+        if (existingProjectMatch) {
+          if (!existingProjectMatch.modules) existingProjectMatch.modules = [];
+          
+          newEntry.modules.forEach(newMod => {
+            const isDuplicate = existingProjectMatch.modules.some(
+              oldMod => String(oldMod.moduleName).trim().toLowerCase() === String(newMod.moduleName).trim().toLowerCase()
+            );
+            if (!isDuplicate) {
+              existingProjectMatch.modules.push(newMod);
+            }
+          });
+        } else {
+          currentActiveWorkspace.push(newEntry);
+        }
+      });
+
+      // 3. Save the merged workspace back and refresh viewports
+      localStorage.setItem('tw_tracker_v9', JSON.stringify(currentActiveWorkspace));
+      mergeToPermanent(currentActiveWorkspace);
+      
       renderSummary();
-      showSummaryToast('Imported ' + entries.length + ' project(s) from Excel.');
+      showSummaryToast('Imported and merged ' + importedEntries.length + ' project(s) cleanly.');
+
     } catch (err) {
       console.error(err);
       showSummaryToast('Could not import this file. Please check the format.');
@@ -380,6 +754,7 @@ function handleSummaryImport(input) {
   };
   reader.readAsArrayBuffer(file);
 }
+
 
 // ── Import helpers (shared logic, same as script.js) ──
 function importWorkbookToEntries(wb) {
@@ -470,7 +845,10 @@ function findImportHeader(rows) {
     const map = {
       entryNum: findHeaderIndex(normalized, ['entryno', 'entrynum', 'entry', 'index']),
       moduleNum: findHeaderIndex(normalized, ['rowno', 'rownum', 'moduleno', 'srno']),
-      projectName: findHeaderIndex(normalized, ['projectname', 'project', 'projectid']),
+      
+      // FIX HERE: Added 'project' and 'projectname' variants to the validation matcher array
+      projectName: findHeaderIndex(normalized, ['projectname', 'project', 'projectid', 'projectname']),
+      
       moduleName: findHeaderIndex(normalized, ['modulename', 'module', 'modules']),
       fwDocs: findHeaderIndex(normalized, ['fwdocs', 'fwdoc', 'fwdocument']),
       moduleNumber: findHeaderIndex(normalized, ['modulenumber', 'modelnumber', 'modulenum']),
@@ -480,13 +858,14 @@ function findImportHeader(rows) {
       review: findHeaderIndex(normalized, ['dateofreview', 'reviewdate', 'review']),
       dateOfTesting: findHeaderIndex(normalized, ['dateoftesting', 'testingdate', 'testdate']),
       tcRelease: findHeaderIndex(normalized, ['tcrelease', 'tcreleasestatus', 'tcstatus']),
-      checkSum: findHeaderIndex(normalized, ['checksum', 'md5', 'hash']), // ADD This
+      checkSum: findHeaderIndex(normalized, ['checksum', 'md5', 'hash']), 
       size: findHeaderIndex(normalized, ['size', 'filesize', 'bytes'])
     };
     if (map.projectName > -1 && map.moduleName > -1) return { headerRowIndex: r, map };
   }
   return null;
 }
+
 
 function findHeaderIndex(headers, names) {
   return headers.findIndex(h => names.includes(h));

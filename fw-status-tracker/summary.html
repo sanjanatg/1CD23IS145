@@ -1,61 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FW Module Tracker – TATA Advanced Systems</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700;800;900&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="style.css"/>
-<script>
-  // Auth guard — redirect to login if not authenticated
-  if (sessionStorage.getItem('tw_auth_session') !== 'authenticated') {
-    window.location.replace('login.html');
-  }
-</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FW Status Tracker – TATA Advanced Systems</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- ADD THESE DEPENDENCIES INTO THE <head> OF YOUR SUMMARY.HTML FILE
+  1. Flatpickr Core Stylesheet and JavaScript Ports
+  <link rel="stylesheet" href="https://jsdelivr.net">
+  <script src="https://jsdelivr.net"></script>
+ 2. Flatpickr Month Select Plugin Stylesheet and JavaScript (Crucial for MM/YYYY Filter Layouts) 
+  <link rel="stylesheet" href="https://jsdelivr.net/dist/plugins/monthSelect/style.css">
+  <script src="https://jsdelivr.net/dist/plugins/monthSelect/index.js"></script>  -->
+
+  <script>
+    // Auth guard — redirect to login if not authenticated
+    if (sessionStorage.getItem('tw_auth_session') !== 'authenticated') {
+      window.location.replace('login.html');
+    }
+  </script>
 </head>
+
 <body class="summary-page-body">
 
-<div class="bg-layer"></div>
-<div class="bg-overlay"></div>
+  <div class="bg-layer"></div>
+  <div class="bg-overlay"></div>
 
-<main class="summary-page">
-  <!-- 1. UPDATED BLUE CONTAINER HEADER -->
-<header class="summary-page-header">
-  <div class="header-left-side">
-    <div class="summary-kicker"><h1>TATA Advanced Systems</h1></div>
-    <br><br>
-    <h2>FW Module Tracker</h2>
-    
-    <!-- Open Tracker is now forced to the bottom-left of the blue container -->
-    <br><br>
-    <div class="tracker-btn-wrapper">
-      <button class="btn-summary-action btn-tracker" onclick="window.location.href='index.html'">
+  <main class="summary-page">
+    <!-- 1. UPDATED BLUE CONTAINER HEADER -->
+    <header class="summary-page-header">
+      <div class="header-left-side">
+        <div class="summary-kicker">
+          <h1>TATA Advanced Systems</h1>
+        </div>
+        <br><br>
+        <h2>FW Status Tracker</h2>
+
+        <!-- Open Tracker is now forced to the bottom-left of the blue container -->
+        <br><br>
+        <div class="tracker-btn-wrapper">
+          <button class="btn-summary-action btn-tracker" onclick="window.location.href='index.html'">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            Open Tracker
+          </button>
+        </div>
+      </div>
+
+      <!-- Logout stands completely alone on the right-most side of the blue container -->
+      <button class="btn-summary-action btn-logout" onclick="doLogout()" title="Logout">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        Open Tracker
+        Logout
       </button>
-    </div>
-  </div>
+    </header>
 
-  <!-- Logout stands completely alone on the right-most side of the blue container -->
-  <button class="btn-summary-action btn-logout" onclick="doLogout()" title="Logout">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    Logout
-  </button>
-</header>
 
-<!-- 2. NEW COMBINED METRICS & IMPORT ROW (Place this right below your header) -->
-<!-- Move the Import button and input wrapper right here, surrounding the grid -->
-<div class="metrics-row-container">
-  
-  <!-- This grid automatically renders your 4 metric boxes via Javascript -->
-  <div class="summary-metric-grid" id="summaryMetricGrid"></div>
-  
-  <!-- This puts the Import button directly next to the 4th metric card -->
+
+
+    <!-- Metrics -->
+    <section class="summary-metric-grid" id="summaryMetricGrid"></section>
+
+    <!-- Project Wise Status -->
+    <!-- 1. RESTORED DASHBOARD STATISTICS SUMMARY METRIC CARDS ROW -->
+    <!-- This grid is now fully restored so renderMetrics() doesn't crash the script! -->
+
+
+    <!-- Import Excel button next to metrics cards
   <div class="metric-import-wrapper">
     <button class="btn-summary-action btn-import-summary" onclick="document.getElementById('summaryImportInput').click()">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
@@ -65,83 +84,212 @@
     </button>
     <input id="summaryImportInput" type="file" accept=".xlsx,.xls,.csv" onchange="handleSummaryImport(this)" hidden/>
   </div>
+</div> -->
 
-</div>
+    <!-- 2. PROJECT WISE STATUS MULTI-FILTER CONTROL ENGINE HUB -->
 
+    <!-- RESTORED TOP SUMMARY METRIC BOXES AND IMPORT BLOCK ROW -->
+    <!-- THE CORRECTED ROW CONTAINER: Restores placeholder bones so row displays instantly -->
+    <div class="metrics-row-container">
 
-
-  <!-- Metrics -->
-  <section class="summary-metric-grid" id="summaryMetricGrid"></section>
-
-  <!-- Project Wise Status -->
-  <section class="summary-section">
-    <div class="summary-section-head">
-      <h2>Project Wise Status</h2>
-      <span id="summaryUpdatedAt"></span>
-    </div>
-    <div class="summary-project-list" id="summaryProjectList"></div>
-  </section>
-
-  <!-- All Module Details (collapsible) -->
-  <section class="summary-section">
-    <div class="summary-section-head summary-toggle-head" onclick="toggleModuleDetails()" id="moduleDetailsToggleHead">
-      <h2>
-        All Module Details
-        <svg class="toggle-chevron" id="moduleDetailsChevron" width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </h2>
-      <span id="summaryRowCount"></span>
-    </div>
-    <div class="summary-collapsible" id="moduleDetailsPanel" style="display:none">
-
-      <!-- Search + Export Selected bar -->
-      <div class="module-search-bar" onclick="event.stopPropagation()">
-        <div class="module-search-wrap">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
-            <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <input type="text" id="moduleSearchInput" placeholder="Search project, module, FW doc, DVC, version, review date, testing date, TC..." oninput="filterModuleTable()"/>
-          <button type="button" class="module-search-clear" id="moduleSearchClear" onclick="clearModuleSearch()" title="Clear search">✕</button>
+      <!-- Injected with four clean temporary placeholders so the row remains visible before JS calculates values -->
+      <!-- REPLACE YOUR Spoken Block inside summary.html WITH THIS: -->
+      <div class="metrics-row-container">
+        <div id="summaryMetricGrid" class="summary-metric-grid">
+          
+          <article class="summary-metric-card">
+            <div>FW Total Projects</div>
+            <strong id="metricTotalProjects">0</strong>
+            <span>Saved project names</span>
+          </article>
+          
+          <article class="summary-metric-card">
+            <div>FW Total Project Modules</div>
+            <strong id="metricTotalModules">0</strong>
+            <span>Total module rows</span>
+          </article>
+          
+          <article class="summary-metric-card">
+            <div>FW Total DVC Reviewed</div>
+            <strong id="metricDvcReviewed">0</strong>
+            <span id="metricDvcSubtext">0 pending / no</span>
+          </article>
+          
+          <article class="summary-metric-card">
+            <div>FW Total TC Released</div>
+            <strong id="metricTcReleased">0</strong>
+            <span id="metricTcSubtext">0 pending / no</span>
+          </article>
+          
         </div>
-        <button class="btn-export-module-selected" type="button" onclick="exportSelectedModuleRows()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3v12M8 11l4 4 4-4M5 21h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      </div>
+      
+
+
+
+
+      <!-- Right-aligned Import Excel Action Button Block -->
+      <div class="metric-import-wrapper">
+        <button class="btn-summary-action btn-import-summary"
+          onclick="document.getElementById('summaryImportInput').click()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="margin-bottom: 4px;">
+            <path d="M12 21V9M8 13l4-4 4 4M5 3h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
-          Export Selected (<span id="selectedRowCount">0</span>)
+          Import Excel
         </button>
+        <input id="summaryImportInput" type="file" accept=".xlsx,.xls,.csv" onchange="handleSummaryImport(this)"
+          hidden />
       </div>
 
-      <div class="summary-table-wrap">
-        <table class="summary-table">
-          <thead>
-            <tr>
-              <th class="summary-select-col"><input type="checkbox" id="selectAllRowsCheckbox" onchange="toggleSelectAllRows(this)" title="Select all"/></th>
-              <th>Project</th>
-              <th>Module</th>
-              <th>FW Doc</th>
-              <th>Module No.</th>
-              <th>I-AUTH-NUM</th>
-              <th>DVC</th>
-              <th>Version</th>
-              <th>Review</th>
-              <th>Testing</th>
-              <th>TC</th>
-              <th>Checksum</th>
-              <th>Size</th>
-            </tr>
-          </thead>
-          <tbody id="summaryTableBody"></tbody>
-        </table>
-      </div>
     </div>
-  </section>
 
-</main>
 
-<div id="summaryToast"></div>
 
-<script src="summary.js"></script>
+    <!-- 2. PROJECT WISE STATUS SPLIT AREA CONTAINER -->
+    <div class="summary-split-panel-layout">
+
+      <!-- LEFT SIDE LAYOUT ELEMENT PANEL: Filter Hub & Consolidate Cards Grid -->
+      <div class="split-left-column">
+        <section class="summary-section">
+          <div class="summary-section-head">
+            <h2>Project Wise Status</h2>
+            <span id="summaryRowCount">0 module rows visible</span>
+          </div>
+
+          <!-- Horizontal Multi-Filter Control Hub -->
+          <div class="dashboard-filter-hub">
+            <div class="fgroup filter-box">
+              <div class="flabel">Filter By Project</div>
+              <select id="filterProjectSelect" onchange="runCombinedFilters()">
+                <!-- Options dynamically loaded via JS -->
+              </select>
+            </div>
+
+            <!-- FILTER 2: Sleek Multi-Select Dropdown Module Drawer -->
+            <div class="fgroup filter-box">
+              <div class="flabel">Filter By Modules</div>
+              <div class="module-dropdown-wrapper">
+                <!-- Clickable selector field box displaying active state labels -->
+                <div class="module-dropdown-select-box" onclick="toggleModuleSelectorDrawer(event)">
+                  <span id="checkboxDropdownLabel">Modules Selected</span>
+                  <svg class="dropdown-arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </div>
+
+                <!-- Hidden floating scrollable context menu layer box -->
+                <div class="module-dropdown-menu-layer" id="moduleCheckboxDrawer" onclick="event.stopPropagation()">
+                  <!-- Checkbox labels injected dynamically via summary.js -->
+                </div>
+              </div>
+            </div>
+
+
+            <!-- NATIVE MONTH FILTER: 100% Offline Compatible & Internet Free -->
+            <!-- FILTER 3: Native Month Input with Auto-Open Picker Interaction -->
+            <div class="fgroup filter-box">
+              <div class="flabel">Filter By Timeline</div>
+              <div class="date-wrap">
+                <input type="text" id="filterTimelineInput" placeholder="MM/YYYY" class="date-inp"
+                  style="cursor: pointer;" onfocus="this.type='month'; try { this.showPicker(); } catch(e) {}"
+                  onblur="if(!this.value) this.type='text'" onchange="handleNativeMonthFilter(this)" />
+              </div>
+            </div>
+
+
+
+
+            <div class="filter-reset-action">
+              <button class="btn-summary-action" onclick="resetDashboardFilters()">Clear</button>
+            </div>
+          </div>
+
+          <!-- Grouped Filter Cards Visual Area -->
+          <div class="summary-project-list" id="summaryProjectList">
+            <!-- Rendered project details show here -->
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT SIDE LAYOUT ELEMENT PANEL: Table Details Drawer -->
+      <div class="split-right-column">
+        <!-- Place your existing collapsible container block for ALL MODULE DETAILS table row components right here -->
+      </div>
+
+    </div>
+
+
+
+    <!-- All Module Details (collapsible) -->
+    <section class="summary-section">
+      <div class="summary-section-head summary-toggle-head" onclick="toggleModuleDetails()"
+        id="moduleDetailsToggleHead">
+        <h2>
+          All Module Details
+          <svg class="toggle-chevron" id="moduleDetailsChevron" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </h2>
+        <span id="summaryRowCount"></span>
+      </div>
+      <div class="summary-collapsible" id="moduleDetailsPanel" style="display:none">
+
+        <!-- Search + Export Selected bar -->
+        <div class="module-search-bar" onclick="event.stopPropagation()">
+          <div class="module-search-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+              <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <input type="text" id="moduleSearchInput"
+              placeholder="Search project, module, FW doc, DVC, version, review date, testing date, TC..."
+              oninput="filterModuleTable()" />
+            <button type="button" class="module-search-clear" id="moduleSearchClear" onclick="clearModuleSearch()"
+              title="Clear search">✕</button>
+          </div>
+          <button class="btn-export-module-selected" type="button" onclick="exportSelectedModuleRows()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v12M8 11l4 4 4-4M5 21h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            Export Selected (<span id="selectedRowCount">0</span>)
+          </button>
+        </div>
+
+        <div class="summary-table-wrap">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th class="summary-select-col"><input type="checkbox" id="selectAllRowsCheckbox"
+                    onchange="toggleSelectAllRows(this)" title="Select all" /></th>
+                <th>Project</th>
+                <th>Module</th>
+                <th>FW Doc</th>
+                <th>Module No.</th>
+                <th>I-AUTH-NUM</th>
+                <th>DVC</th>
+                <th>Version</th>
+                <th>Review</th>
+                <th>Testing</th>
+                <th>TC</th>
+                <th>Checksum</th>
+                <th>Size</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="summaryToast"></div>
+
+  <script src="summary.js"></script>
 </body>
+
 </html>

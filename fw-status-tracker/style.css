@@ -1129,31 +1129,237 @@
 .unique-tracker-header .tracker-btn-wrapper {
   margin-top: 14px;
 }
-/* --- Fine Border Separation Line Between Module Rows --- */
-.module-divider {
-  position: relative;
-  /* INCREASED: Pushes content further down away from the divider line */
-  padding-top: 28px; 
+/* --- FIX: Forces Filter Box Hub onto a Single Row Line --- */
+.dashboard-filter-hub {
+  display: flex !important;
+  flex-direction: row !important; /* Locks components side-by-side */
+  align-items: flex-end !important; /* Aligns dropdown text boxes to the bottom edge */
+  gap: 16px;
+  flex-wrap: wrap; /* Allows safe wrapping on narrow tablet screens */
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(90, 180, 214, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
-/* Draws the line automatically before every row except the first module row */
-.module-row-wrap.module-divider ~ .module-row-wrap.module-divider::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    rgba(90, 180, 214, 0.4) 0%, 
-    rgba(155, 111, 181, 0.2) 60%, 
-    transparent 100%);
-}
-
-/* Adjusts the internal module layout stacking constraints inside the project container */
-.module-rows {
+/* Forces each individual filter component block to grow evenly across the line */
+.dashboard-filter-hub .filter-box {
+  flex: 1 1 200px !important; 
   display: flex;
   flex-direction: column;
-  /* INCREASED: Adds much more clear gap distance space between modules */
-  gap: 36px; 
+  gap: 6px;
+}
+
+.dashboard-filter-hub .filter-reset-action {
+  flex-shrink: 0;
+  margin-bottom: 2px; /* Visual baseline leveling tweak */
+}
+/* --- Sleek Custom Dropdown Select Component Box Layouts --- */
+.module-dropdown-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.module-dropdown-select-box {
+  width: 100%;
+  height: 42px;
+  border: 1.5px solid rgba(90, 180, 214, 0.3);
+  border-radius: 6px;
+  padding: 0 14px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1e2a3a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 1px 5px rgba(90, 140, 200, 0.07);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* Border shifts matching focus states when drop menus hang open */
+.module-dropdown-select-box.active-box, 
+.module-dropdown-select-box:hover {
+  border-color: #5ab4d6;
+}
+
+.module-dropdown-select-box.active-box {
+  box-shadow: 0 0 0 3px rgba(90, 180, 214, 0.15);
+}
+
+.dropdown-arrow-icon {
+  color: #5e7080;
+  transition: transform 0.2s ease;
+}
+
+/* Rotate icon upward smoothly when active choice is open */
+.module-dropdown-select-box.active-box .dropdown-arrow-icon {
+  transform: rotate(180deg);
+}
+
+/* --- Floating Scrollable Checkbox Drawer Panel Overlay --- */
+.module-dropdown-menu-layer {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid rgba(90, 180, 214, 0.28);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(30, 42, 58, 0.14);
+  max-height: 220px; /* Constrains infinite stacking rows cluttering look */
+  overflow-y: auto;  /* Triggers precise vertical scrolling rules inside drawer */
+  z-index: 999;
+  display: none;     /* Completely hidden out of sight by default layout rules */
+  padding: 6px 0;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* Enforce fluid hardware rendering visibility swaps when triggered */
+.module-dropdown-menu-layer.open-drawer {
+  display: block !important;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Checkbox single item padding and flex alignment layout rows */
+.drawer-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1e2a3a;
+  transition: background 0.12s;
+}
+
+.drawer-checkbox-item:hover {
+  background: rgba(90, 180, 214, 0.08);
+}
+
+.drawer-checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0e7fa8; /* Matches primary dark blue theme tone */
+  cursor: pointer;
+}
+/* --- Forces Status Layout Card to Span Full Component Width --- */
+.summary-project-list {
+  display: flex !important;
+  flex-direction: column !important; /* Stack project block containers vertically instead of tiny side-by-side squares */
+  gap: 16px;
+  width: 100%;
+}
+
+.full-width-card-override {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 24px !important; /* Premium comfortable breathing room inside card padding constraints */
+}
+
+/* --- Reorganized YES / NO side-by-side layout matrix grids --- */
+.aligned-rows-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.stat-row {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+}
+
+/* Forces the Modules Matched list container line to claim its own full standalone row space */
+.full-width-stat {
+  padding: 12px 16px !important;
+  background: rgba(14, 127, 168, 0.05);
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--text);
+  width: 100%;
+}
+
+/* Pairs YES and NO parameters side-by-side evenly across columns */
+.split-stat-pair {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px;
+  width: 100%;
+}
+
+.split-stat-pair span {
+  padding: 12px 16px !important;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(90, 180, 214, 0.15);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+
+.split-stat-pair span strong {
+  margin-left: auto; /* Nicely float data counts variables to the right edge of line pills */
+  font-size: 14px;
+  color: var(--text);
+}
+/* Container that forces both the 4 metrics cards and the button onto one horizontal row line */
+.metrics-row-container {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important; /* Stretches the button to match card heights cleanly */
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+/* Restores the grid constraints layout metrics */
+.summary-metric-grid {
+  flex: 1 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important; /* Forms a clean 4-column row layout */
+  gap: 12px;
+  margin-bottom: 0 !important;
+}
+
+.metric-import-wrapper {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+/* Formats the Import button container card appearance */
+.metric-import-wrapper .btn-import-summary {
+  height: 100% !important;
+  min-height: 116px; /* Matches the exact min-height attributes of your stats cards */
+  width: 180px;      
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent, #0e7fa8) !important; 
+  color: #ffffff !important; 
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px !important;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+
+.metric-import-wrapper .btn-import-summary:hover {
+  background: #0b6a91 !important;
+  transform: translateY(-1px);
 }
